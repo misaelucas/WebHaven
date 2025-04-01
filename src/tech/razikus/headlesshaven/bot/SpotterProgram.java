@@ -113,6 +113,9 @@ public class SpotterProgram extends AbstractProgram {
         int counter = 0;
         int foundCountOld = 0;
 
+        // Feature: Track session start time for resource timeout
+        long startTime = System.currentTimeMillis();
+
         while ((session.isAlive() && !this.isShouldClose())) {
             this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
                     "state",
@@ -154,6 +157,18 @@ public class SpotterProgram extends AbstractProgram {
                     continue;
                 }
             }
+
+            // Feature: Auto-disconnect if resource not found after 10 seconds
+            if (!found && System.currentTimeMillis() - startTime > 10000) {
+                System.out.println("RESOURCE NOT FOUND. Logging out.");
+                this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
+                        "state",
+                        "RESOURCE NOT FOUND"
+                ));
+                this.session.setShouldClose(true);
+                return;
+            }
+
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -161,15 +176,6 @@ public class SpotterProgram extends AbstractProgram {
             }
 
             counter++;
-
-            if(!found && counter > 60) {
-
-                this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
-                        "state",
-                        "SESSION DISCONNECTED"
-                ));
-                this.session.setShouldClose(true);
-            }
         }
         if(infoSend) {
             String mess = "DISCONNECTING  SESSION: " + sessName;
