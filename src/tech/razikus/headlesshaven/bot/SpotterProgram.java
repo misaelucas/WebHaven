@@ -78,19 +78,17 @@ public class SpotterProgram extends AbstractProgram {
             this.sessName = null;
             this.getManager().getSessions().remove(sessName);
 
-            this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
-                    "state",
-                    "SLEEPING"
-            ));
-            this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
-                    "message",
-                    "Sleeping for 60 seconds before finding again"
-            ));
-
-            try {
-                Thread.sleep(1000 * 60);
-            } catch (InterruptedException e) {
-                setShouldClose(true);
+            // Feature: Retry logic - wait 22 min before new login attempt
+            if (!this.isShouldClose()) {
+                this.getManager().brodcastFromProgram(this.getProgname(), new CommandTypeWrapper(
+                        "message",
+                        "Resource not found. Waiting for 22 minutes before retrying."
+                ));
+                try {
+                    Thread.sleep(1000 * 60 * 22); // 22 minutes
+                } catch (InterruptedException e) {
+                    setShouldClose(true);
+                }
             }
         }
     }
