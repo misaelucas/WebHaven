@@ -1,5 +1,10 @@
 package tech.razikus.headlesshaven.bot;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import tech.razikus.headlesshaven.PseudoObject;
 import tech.razikus.headlesshaven.ResourceInformationLazyProxy;
 import tech.razikus.headlesshaven.WebHavenSession;
@@ -7,30 +12,28 @@ import tech.razikus.headlesshaven.WebHavenSessionManager;
 import tech.razikus.headlesshaven.bot.automation.AutoLoginCharCallback;
 import tech.razikus.headlesshaven.bot.automation.DiscordWebhook;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-public class SpotterProgram extends AbstractProgram{
-
+public class SpotterProgram extends AbstractProgram {
 
     public SpotterProgram(String progname, WebHavenSessionManager manager, Credential credential, HashMap<String, String> runningArgs) {
         super(progname, manager, credential, runningArgs);
     }
 
-    public static HashMap<String, String> declaredArgs = new HashMap<>(Map.of("resource_to_spot", "Resource name to spot", "discord_key", "Discord api key to push notifications to"));
-
+    public static HashMap<String, String> declaredArgs = new HashMap<>(Map.of(
+            "resource_to_spot", "Resource name to spot",
+            "discord_key", "Discord api key to push notifications to"
+    ));
 
     private WebHavenSession session;
     private String sessName;
-
     private DiscordWebhook webhook;
 
     @Override
     public void run() {
         this.webhook = new DiscordWebhook(getRunningArgs().get("discord_key"));
+
+        // Feature: Track login attempts with timestamp for debugging
+        int attemptCount = 0;
+
         while (!this.isShouldClose()) {
             WebHavenSessionManager manager = this.getManager();
             String username = this.getCredential().getUsername();
@@ -39,7 +42,13 @@ public class SpotterProgram extends AbstractProgram{
 
             String sessName = username + "-" + altname;
             this.sessName = sessName;
-            if(manager.getSessions().containsKey(sessName)) {
+
+            // Feature: Log attempt number and time
+            attemptCount++;
+            String timestamp = java.time.LocalDateTime.now().toString();
+            System.out.println("Login attempt #" + attemptCount + " at " + timestamp);
+
+            if (manager.getSessions().containsKey(sessName)) {
                 return;
             }
 
@@ -78,13 +87,11 @@ public class SpotterProgram extends AbstractProgram{
                     "Sleeping for 60 seconds before finding again"
             ));
 
-
             try {
                 Thread.sleep(1000 * 60);
             } catch (InterruptedException e) {
                 setShouldClose(true);
             }
-
         }
     }
 
@@ -125,7 +132,6 @@ public class SpotterProgram extends AbstractProgram{
                         counter = 0;
                     }
                 }
-
             }
             if(infoSend && foundCountOld != foundCount) {
                 String mess = "FOUND " + toFind + " COUNT: " + foundCount + " | SESSION: " + sessName;
